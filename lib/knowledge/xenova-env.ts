@@ -13,6 +13,20 @@ import path from 'node:path'
 const BUNDLED_CACHE = path.join(process.cwd(), 'models', 'transformers-cache')
 const TMP_CACHE = path.join(os.tmpdir(), 'transformers-cache')
 
+function ensureCacheDir(dir: string): string {
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    return dir
+  } catch (err) {
+    const code = err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined
+    if (code === 'EACCES' || code === 'EPERM') {
+      fs.mkdirSync(TMP_CACHE, { recursive: true })
+      return TMP_CACHE
+    }
+    throw err
+  }
+}
+
 type XenovaEnv = {
   cacheDir: string | null
   allowLocalModels: boolean
@@ -45,13 +59,13 @@ function bundledReady(): boolean {
 }
 
 export function transformersCacheDir(): string {
+  const envCache = process.env.TRANSFORMERS_CACHE?.trim()
+  if (envCache) return ensureCacheDir(envCache)
   if (bundledReady()) return BUNDLED_CACHE
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    fs.mkdirSync(TMP_CACHE, { recursive: true })
-    return TMP_CACHE
+    return ensureCacheDir(TMP_CACHE)
   }
-  fs.mkdirSync(BUNDLED_CACHE, { recursive: true })
-  return BUNDLED_CACHE
+  return ensureCacheDir(BUNDLED_CACHE)
 }
 
 export function configureXenovaEnv(env: XenovaEnv): void {

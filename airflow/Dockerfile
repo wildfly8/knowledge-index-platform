@@ -7,4 +7,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-USER airflow
+COPY docker-entrypoint.sh /docker-entrypoint-knowledge.sh
+RUN chmod +x /docker-entrypoint-knowledge.sh \
+    && mkdir -p /opt/airflow/xenova-cache \
+    && chown -R airflow:root /opt/airflow/xenova-cache
+
+ENTRYPOINT ["/docker-entrypoint-knowledge.sh"]
+CMD ["standalone"]

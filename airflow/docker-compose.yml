@@ -17,6 +17,7 @@ services:
       KNOWLEDGE_INDEX_REPO: /opt/knowledge-index-platform
       CORPUS_ROOT: /opt/agentic-foundation
       AGENTIC_FOUNDATION_REPO: /opt/agentic-foundation
+      TRANSFORMERS_CACHE: /opt/airflow/xenova-cache
       UPSTASH_DAILY_WRITE_CAP: "10000"
       EMBED_BACKFILL_WRITE_BUDGET: "9500"
       UPSTASH_VECTOR_REST_URL: ${UPSTASH_VECTOR_REST_URL}
@@ -28,7 +29,7 @@ services:
       - ..:/opt/knowledge-index-platform
       - ../../agentic-foundation:/opt/agentic-foundation:ro
       - node-modules-linux:/opt/knowledge-index-platform/node_modules
-      - xenova-cache:/opt/knowledge-index-platform/models
+      - xenova-cache:/opt/airflow/xenova-cache
     ports:
       - "8080:8080"
     healthcheck:
