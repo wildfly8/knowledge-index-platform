@@ -1,0 +1,43 @@
+# Airflow standalone for Feature 002 archive embedding backfill.
+# Usage (from this repo's airflow/):
+#   docker compose build
+#   docker compose up -d
+#   # UI http://localhost:8080
+#
+# Platform code: /opt/knowledge-index-platform (this repo)
+# Producer corpus: /opt/agentic-foundation (sibling checkout with content/ + data/)
+services:
+  airflow:
+    build: .
+    container_name: embed-backfill-airflow
+    command: standalone
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      KNOWLEDGE_INDEX_REPO: /opt/knowledge-index-platform
+      CORPUS_ROOT: /opt/agentic-foundation
+      AGENTIC_FOUNDATION_REPO: /opt/agentic-foundation
+      UPSTASH_DAILY_WRITE_CAP: "10000"
+      EMBED_BACKFILL_WRITE_BUDGET: "9500"
+      UPSTASH_VECTOR_REST_URL: ${UPSTASH_VECTOR_REST_URL}
+      UPSTASH_VECTOR_REST_TOKEN: ${UPSTASH_VECTOR_REST_TOKEN}
+      KNOWLEDGE_INFERENCE_WORKER: "0"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - airflow-db:/opt/airflow
+      - ..:/opt/knowledge-index-platform
+      - ../../agentic-foundation:/opt/agentic-foundation:ro
+      - node-modules-linux:/opt/knowledge-index-platform/node_modules
+      - xenova-cache:/opt/knowledge-index-platform/models
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  airflow-db:
+  node-modules-linux:
+  xenova-cache:

@@ -1,0 +1,29 @@
+---
+description: Knowledge Index Platform — Spec-Kit and governance overrides
+alwaysApply: true
+---
+
+# Knowledge Index Platform context
+
+This repo is a **standalone index microservice** (Features 001–002 only).
+
+## Gates (replace any `domain:*` references)
+
+- **No** `domain:extract`, `domain:check`, or `domain.graph.yaml` — not installed here.
+- Use constitution Quality Gates: `npm test`, `npm run validate`, CLI dry-runs.
+- Observable behavior: amend `contracts/public/knowledge-index/` (semver) — not `specs/**/contracts/` alone.
+
+## Scope boundaries
+
+- **No** registered users, auth, chat UI, or `POST /api/knowledge/retrieve` in this repo.
+- Corpus at `CORPUS_ROOT` (producer checkout); paths in public `data-contract.md`.
+- Sole writer to Upstash; read consumers pin the public contract.
+
+## Feature IDs
+
+| ID | Folder |
+|----|--------|
+| 001 | `specs/001-posts-vector-index` |
+| 002 | `specs/002-archive-embed-backfill` |
+
+Do not reference agentic-foundation Features 003–008 or `specs/005-*` / `specs/007-*` paths.

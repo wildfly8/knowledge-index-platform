@@ -1,0 +1,5 @@
+publishes:
+  - name: knowledge-index
+    version: 1.0.0
+    path: contracts/public/knowledge-index
+    surfaces: [api, data, capability]
