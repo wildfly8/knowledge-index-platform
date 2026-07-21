@@ -6,9 +6,9 @@
 
 **Status**: Approved
 
-**Input**: Embed MD posts under `content/posts/examined/**` and
-`content/posts/unfolding/**` (excluding `pre-examined` and conversation year
-archives) into Upstash Vector via operator CLI.
+**Input**: Embed MD posts under producer paths `content/posts/examined/**` and
+`content/posts/unfolding/**` (at `CORPUS_ROOT`, not in this repo; excluding
+`pre-examined` and conversation year archives) into Upstash Vector via operator CLI.
 
 ## Summary
 

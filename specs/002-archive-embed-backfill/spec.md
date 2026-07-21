@@ -6,9 +6,10 @@
 
 **Status**: Approved
 
-**Input**: Incrementally embed large ChatGPT/Gemini year archives into the
-shared Upstash index under a daily write budget, with Airflow scheduling and
-durable resume.
+**Input**: Incrementally embed large ChatGPT/Gemini year archives from the
+producer checkout (`CORPUS_ROOT` paths `content/posts/unfolding/*-20xx.mdx` →
+`data/unfolding-*`) into the shared Upstash index under a daily write budget,
+with Airflow scheduling and durable resume.
 
 ## Summary
 
