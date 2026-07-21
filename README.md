@@ -24,6 +24,17 @@ Governance: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
 - Online retrieve may remain in the consumer app for latency; this platform remains the
   **sole writer** to the shared Upstash index
 
+## Security
+
+Tracked files contain **no Upstash credentials** — only empty env var names in
+`.env.example` and `airflow/.env.example`. Local `.env` and `airflow/.env` are
+**gitignored** and must never be committed. `docker-compose.yml` references
+`${UPSTASH_VECTOR_*}` from your shell or `airflow/.env` at runtime only.
+
+Verified: `git grep` on `HEAD` finds no `upstash.io` URLs or token values in
+tracked files. If a token is ever committed to a public remote, rotate it in the
+Upstash console immediately.
+
 ## Corpus paths (producer checkout only)
 
 **There is no `content/` or `data/` in this repository.** Operators set
@@ -37,6 +48,48 @@ below are read **from that producer tree** at CLI runtime:
 
 Index stubs (`chatgpt.mdx`) and ISR part stubs (`chatgpt-2025-p1.mdx`) are **not**
 backfill sources — they render slices of the year archive file.
+
+## Repository layout
+
+This is a **CLI + library** service (not a Next.js app). Implementation code:
+
+```text
+knowledge-index-platform/
+├── lib/
+│   ├── env/
+│   │   └── load-env.ts              # .env loader for CLIs
+│   └── knowledge/
+│       ├── paths.ts                 # corpus path rules (CORPUS_ROOT-relative)
+│       ├── corpus.ts                # list/read producer MDX + data/ resolution
+│       ├── manifest.ts              # deploy-sync __manifest__
+│       ├── embed.ts                 # Xenova batch embed
+│       ├── embed-saga.ts            # SAGA-EMBED-001 (EM01–EM09)
+│       ├── vector-client.ts         # @upstash/vector client
+│       ├── vector-payload.ts        # chunk id + metadata schema
+│       ├── backfill-saga.ts         # SAGA-BACKFILL-001 (BF01–BF08)
+│       ├── backfill-budget.ts       # daily write budget (INV-BACKFILL-001)
+│       ├── backfill-manifest.ts     # __backfill_manifest__
+│       ├── backfill-scan.ts         # year-archive backlog diff
+│       └── *.test.ts                # unit + integration tests (npm test)
+├── scripts/
+│   ├── embed-posts/
+│   │   ├── sync.ts                  # npm run embed:sync
+│   │   ├── backfill.ts              # npm run embed:backfill
+│   │   ├── chunk-mdx.ts             # MDX → text chunks
+│   │   └── digest.ts
+│   ├── check-public-contract.ps1
+│   ├── validate.ps1
+│   └── knowledge-inference-worker.ts
+├── airflow/
+│   ├── dags/embed_archive_backfill.py
+│   ├── docker-compose.yml
+│   └── Dockerfile
+├── contracts/public/knowledge-index/   # published contract (pin @1.0.0)
+└── specs/                              # internal Spec-Kit (not normative for consumers)
+```
+
+**Not in this repo:** `app/`, `content/`, `data/`, auth, or retrieve HTTP APIs
+(those live in the corpus producer / read-consumer apps).
 
 ## Quick start
 
@@ -55,6 +108,7 @@ Airflow (Feature 002):
 
 ```powershell
 cd airflow
+Copy-Item .env.example .env   # set UPSTASH_VECTOR_* (gitignored)
 docker compose up -d
 # UI http://localhost:8080 — DAG embed_archive_backfill @ 01:00 UTC
 ```

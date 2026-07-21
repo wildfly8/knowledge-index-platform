@@ -1,5 +1,7 @@
 .env
 .env.local
+.env.*
+!.env.example
 node_modules/
 models/
 lib/knowledge/sync-manifest.json
@@ -7,4 +9,6 @@ lib/knowledge/backfill-manifest.json
 *.log
 .DS_Store
 airflow/.env
+airflow/.env.*
+!airflow/.env.example
 **/__pycache__/
