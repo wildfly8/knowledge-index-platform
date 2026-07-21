@@ -1,13 +1,12 @@
 # Vector retrieval (internal redirect)
 
-> **Not a published contract.** This platform does not implement retrieval HTTP
-> APIs or user sessions. Read consumers pin the public data contract:
+> **Not a published contract.** Normative retrieve HTTP is Feature **003** and
+> the public contract @ **`3.0.0`**:
 > [`contracts/public/knowledge-index`](../../../contracts/public/knowledge-index/README.md)
-> @ **`1.0.0`**.
+> — release tag `contracts/knowledge-index/v3.0.0`.
 
-Index read surface (metadata schema, corpus path rules, consumer rerank flow)
-is documented in
-[data-contract.md § Index read surface](../../../contracts/public/knowledge-index/data-contract.md).
+Query HTTP routes and response shapes are in
+[api-contract.md](../../../contracts/public/knowledge-index/api-contract.md) § Query HTTP.
 
-Authentication, rate limits, and chat UI are **consumer-owned** (for example
-the corpus producer application). This repository writes vectors only.
+Implementation: `lib/knowledge/retrieve-core.ts`, `server/index.ts`, spec
+`specs/003-knowledge-query-api/`.

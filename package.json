@@ -2,14 +2,16 @@
   "name": "knowledge-index-platform",
   "version": "1.0.0",
   "private": true,
-  "description": "Posts vector index sync and budgeted archive embedding backfill (Spec-Kit)",
+  "description": "Posts vector index sync, archive backfill, and query HTTP API (Spec-Kit)",
   "scripts": {
     "embed:sync": "tsx scripts/embed-posts/sync.ts",
     "embed:backfill": "tsx scripts/embed-posts/backfill.ts",
     "knowledge:worker": "node --max-old-space-size=4096 --import tsx scripts/knowledge-inference-worker.ts",
     "prefetch:xenova": "node scripts/prefetch-xenova-models.mjs",
+    "serve": "tsx server/index.ts",
     "postinstall": "node scripts/fix-xenova-sharp.mjs",
-    "test": "node --import tsx --test lib/knowledge/**/*.test.ts",
+    "test": "node --import tsx --test lib/**/*.test.ts",
+    "test:retrieve": "node --import tsx --test lib/knowledge/retrieve*.test.ts lib/knowledge/rerank.test.ts",
     "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate.ps1"
   },
   "dependencies": {

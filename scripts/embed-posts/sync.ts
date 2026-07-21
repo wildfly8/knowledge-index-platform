@@ -29,7 +29,13 @@ import { POSTS_PRE_EXAMINED_PREFIX, vectorIdForChunk } from '@/lib/knowledge/pat
 import { chunkVectorPayload } from '@/lib/knowledge/vector-payload'
 import { isVectorConfigured, getVectorIndex } from '@/lib/knowledge/vector-client'
 import { resolveEmbedEventForSync } from '@/lib/knowledge/embed-saga'
+import {
+  computeSyncPlan,
+  filesNeedingWork,
+  removedEssayPaths
+} from '@/lib/knowledge/sync-plan'
 
+const LOG = '[embed:sync]'
 const BATCH_SIZE = 16
 const PRE_EXAMINED_PREFIX = POSTS_PRE_EXAMINED_PREFIX
 
@@ -58,21 +64,65 @@ function syncOptional(): boolean {
   return process.env.EMBED_SYNC_OPTIONAL === 'true' || !syncRequired()
 }
 
-function filesNeedingWork(
-  manifest: SyncManifest,
-  corpus: ReturnType<typeof listCorpusFiles>
-): string[] {
-  if (!manifest.manifest_digest || manifest.status === 'no_index') {
-    return corpus.map((f) => f.essay_path)
-  }
-  return corpus
-    .filter((f) => manifest.files[f.essay_path]?.content_hash !== f.content_hash)
-    .map((f) => f.essay_path)
+interface CliArgs {
+  dryRun: boolean
+  trigger: 'deploy_postbuild' | 'manual' | 'ci'
 }
 
-function removedEssayPaths(manifest: SyncManifest, corpus: ReturnType<typeof listCorpusFiles>) {
-  const live = new Set(corpus.map((f) => f.essay_path))
-  return Object.keys(manifest.files).filter((p) => !live.has(p))
+function parseArgs(argv: string[]): CliArgs {
+  const args: CliArgs = { dryRun: false, trigger: 'deploy_postbuild' }
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]
+    if (a === '--dry-run') args.dryRun = true
+    else if (a === '--trigger') {
+      const value = argv[++i]
+      if (value === 'deploy_postbuild' || value === 'manual' || value === 'ci') {
+        args.trigger = value
+      } else {
+        throw new Error(`--trigger must be deploy_postbuild|manual|ci (got: ${value})`)
+      }
+    } else if (a === 'manual' || a === 'ci') {
+      args.trigger = a
+    } else {
+      throw new Error(`Unknown flag: ${a}`)
+    }
+  }
+  return args
+}
+
+async function runDryRun(trigger: CliArgs['trigger']): Promise<number> {
+  const corpus = listCorpusFiles()
+  const prior = await readManifest()
+  const plan = computeSyncPlan(prior, corpus, isVectorConfigured())
+
+  console.log(`${LOG} dry-run (trigger=${trigger})`)
+  console.log(
+    `${LOG} corpus: ${plan.corpusFileCount} files, digest ${plan.digest.slice(0, 19)}…`
+  )
+  console.log(`${LOG} prior status: ${plan.priorStatus}`)
+
+  if (plan.wouldSkip) {
+    console.log(`${LOG} ${plan.skipEdgeId}: digest unchanged — would skip sync`)
+    return 0
+  }
+
+  if (!plan.vectorConfigured) {
+    console.warn(`${LOG} UPSTASH_VECTOR_* not configured — plan only (no writes)`)
+  }
+
+  for (const essayPath of plan.toProcess) {
+    console.log(`${LOG}   embed:  ${essayPath}`)
+  }
+  for (const essayPath of plan.removed) {
+    const chunks = prior.files[essayPath]?.chunk_count ?? 0
+    console.log(`${LOG}   remove: ${essayPath} (delete ${chunks} vectors)`)
+  }
+
+  if (plan.toProcess.length === 0 && plan.removed.length === 0) {
+    console.log(`${LOG} no file-level changes (manifest may need full reconcile)`)
+  }
+
+  return 0
 }
 
 async function purgePreExamined(index: ReturnType<typeof getVectorIndex>) {
@@ -123,12 +173,12 @@ async function runSync(trigger: 'deploy_postbuild' | 'manual' | 'ci' = 'deploy_p
   })
 
   if (event === 'posts_digest_unchanged') {
-    console.log('[embed:sync] EM09: digest unchanged — skip sync')
+    console.log(`${LOG} EM09: digest unchanged — skip sync`)
     return 0
   }
 
   if (!isVectorConfigured()) {
-    const msg = '[embed:sync] UPSTASH_VECTOR_* not configured'
+    const msg = `${LOG} UPSTASH_VECTOR_* not configured`
     if (syncOptional()) {
       console.warn(`${msg} — skipping (optional)`)
       return 0
@@ -206,7 +256,7 @@ async function runSync(trigger: 'deploy_postbuild' | 'manual' | 'ci' = 'deploy_p
     await writeManifest(manifest)
 
     console.log(
-      `[embed:sync] complete: ${chunksWritten} chunks, ${corpus.length} files, digest ${digest.slice(0, 19)}…`
+      `${LOG} complete: ${chunksWritten} chunks, ${corpus.length} files, digest ${digest.slice(0, 19)}…`
     )
     return 0
   } catch (err) {
@@ -226,22 +276,28 @@ async function runSync(trigger: 'deploy_postbuild' | 'manual' | 'ci' = 'deploy_p
       const writeMessage =
         writeErr instanceof Error ? writeErr.message : String(writeErr)
       console.error(
-        '[embed:sync] could not record sync_failed manifest:',
+        `${LOG} could not record sync_failed manifest:`,
         writeMessage
       )
     }
-    console.error('[embed:sync] failed:', message)
+    console.error(`${LOG} failed:`, message)
     return syncOptional() ? 0 : 1
   }
 }
 
-const triggerArg = process.argv[2]
-const trigger =
-  triggerArg === 'manual' || triggerArg === 'ci' ? triggerArg : 'deploy_postbuild'
+let cli: CliArgs
+try {
+  cli = parseArgs(process.argv.slice(2))
+} catch (err) {
+  console.error(`${LOG} ${err instanceof Error ? err.message : err}`)
+  process.exit(1)
+}
 
-runSync(trigger)
+const run = cli.dryRun ? runDryRun(cli.trigger) : runSync(cli.trigger)
+
+run
   .then((code) => process.exit(code))
   .catch((err) => {
-    console.error('[embed:sync] fatal:', err instanceof Error ? err.message : err)
+    console.error(`${LOG} fatal:`, err instanceof Error ? err.message : err)
     process.exit(syncOptional() ? 0 : 1)
   })

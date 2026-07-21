@@ -31,6 +31,22 @@ npm run validate
 
 ## Read-consumer smoke
 
-Retrieval and auth are **not** implemented in this repo. After sync, verify chunk
-metadata in Upstash or via the read consumer application per the public data
-contract.
+After sync, verify retrieval via Feature **003** (`npm run serve`) or the read
+consumer proxy — see [003 quickstart](../003-knowledge-query-api/quickstart.md).
+
+## Producer hook
+
+The corpus producer (e.g. `agentic-foundation`) should invoke this platform's
+sync after deploy when posts change. Example Vercel `package.json` postbuild
+sequence (paths are illustrative):
+
+```json
+{
+  "scripts": {
+    "postbuild": "node scripts/pagefind.mjs && cd ../knowledge-index-platform && npm run embed:sync"
+  }
+}
+```
+
+Set `CORPUS_ROOT` in the platform `.env` to the producer checkout (or pass it
+in CI). Use `npm run embed:sync -- --dry-run` in CI plan-only jobs.

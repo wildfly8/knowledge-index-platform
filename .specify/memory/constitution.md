@@ -11,8 +11,8 @@
 This repository is a **standalone knowledge-index microservice**: it owns
 embedding, vector-index write paths, deploy sync, and budgeted archive
 backfill into Upstash Vector. It serves corpus producers and read consumers
-(first pair: `agentic-foundation` as both) and owns **no** end-user UI, chat
-answer composition, auth product, or site content authorship.
+(first pair: `agentic-foundation` as both) and owns **no** end-user UI, auth
+product, or site content authorship. Answer composition runs on Feature **003**.
 
 ## Core Principles
 
@@ -61,12 +61,11 @@ cursor at the last committed micro-batch; retries resume without duplicates
 (idempotent vector ids). Stuck transient saga states (`batch_running` /
 `batch_committed`) recover via BF06-equivalent retry — never refuse forever.
 
-### VI. Consumer Query Path May Stay In-App
-Online retrieve/rerank for chat MAY remain in a read-consumer application for
-latency. When it does, the consumer is a **read client** of the same Upstash
-index and MUST honor the public vector-id and metadata contract. This platform
-remains the sole writer. Auth and user identity are consumer-owned — this
-platform has no registered users.
+### VI. Query and Answer Path Owned Here (amended 2026-07-20)
+Feature **003** serves retrieve, rerank, and extractive/generative answer
+composition over HTTP (`npm run serve`, `POST /v1/chat`). Read consumers call
+the API with a bearer secret; they keep user auth, chat UI, and rate limits.
+This platform remains the sole index **writer** (Features 001–002).
 
 ### VII. Privacy at Index Boundary
 Chunk payloads MUST NOT include auth material, raw user/session ids, or
@@ -94,7 +93,9 @@ Airflow over a permanent always-on service until traffic requires it.
 | Archive backfill, `__backfill_manifest__`, Airflow DAG, write budget | **This project** |
 | Public index contract (`contracts/public/knowledge-index`) | **This project** |
 | Essay/MDX content + `data/` archives | Producer (`agentic-foundation`) |
-| Chat UI, extractive/generative answers, retrieve HTTP API | Read consumer (producer app) |
+| Chat UI | Read consumer (producer app) |
+| Extractive/generative answers | **This project** (Feature 003 `/v1/chat`) |
+| Query HTTP (retrieve / status / warm) | **This project** (Feature 003) |
 | Auth gate for product APIs | Read consumer |
 | Chat SLOs / OTel product metrics | Read consumer / OTel platform |
 
@@ -104,6 +105,7 @@ Airflow over a permanent always-on service until traffic requires it.
 |----|------|-------|
 | 001 | Posts vector index (deploy sync) | Public contract deploy-sync writer |
 | 002 | Budgeted archive embedding backfill | Public contract archive-backfill writer |
+| 003 | Knowledge query API | HTTP retrieve + rerank (`npm run serve`) |
 
 ## Quality Gates
 
@@ -117,6 +119,7 @@ editorial review of `spec.md` plus the gates below.
 | Sync dry | Deploy sync plan against configured corpus | `npm run embed:sync -- --dry-run` |
 | Backfill | Budget validate + dry-run plan | `npm run embed:backfill -- --dry-run` |
 | Backfill verify | Manifest vs live vectors (read-only) | `npm run embed:backfill -- --verify` |
+| Query API | Retrieve smoke | `npm run serve` + quickstart § Smoke test |
 | Airflow | DAG parses; compose up healthy | `docker compose` in `airflow/` |
 
 ## Artifact Precedence

@@ -1,7 +1,7 @@
 # knowledge-index public contract
 
 **Contract**: `knowledge-index`  
-**Version**: `1.0.0`  
+**Version**: `3.0.0`  
 **Publisher**: `knowledge-index-platform`
 
 Normative external surface for the shared Upstash Vector semantic index. This
@@ -21,9 +21,9 @@ package is the only contract consumers may pin. Internal feature specs under
 
 ## Release
 
-Published release tag: `contracts/knowledge-index/v1.0.0`
+Published release tag: `contracts/knowledge-index/v3.0.0`
 
-Pin as: `contracts/public/knowledge-index@1.0.0`
+Pin as: `contracts/public/knowledge-index@3.0.0`
 
 ## Consumer rule
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.0.0
+
+- **MINOR** (additive): `POST /v1/chat` — retrieve + extractive/generative answer
+  composition on the platform (Feature 003).
+- `POST /v1/warm` may preload generator ONNX when `GENERATOR_SYNTHESIZE=true`.
+- Query/retrieve surfaces from 2.0.0 unchanged.
+
+## 2.0.0
+
+- **MAJOR** (additive): Query HTTP API (Feature 003) — `POST /v1/retrieve`,
+  `GET /v1/status`, `POST /v1/warm`, `GET /health`.
+- Documents bearer auth (`KNOWLEDGE_RETRIEVE_API_SECRET`) and two-stage
+  retrieve pipeline (bi-encoder ANN + cross-encoder rerank).
+- CLI write surfaces unchanged from 1.0.0.
+
 ## 1.0.0
 
 - Initial publication of the standalone knowledge-index platform contract.

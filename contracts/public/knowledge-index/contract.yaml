@@ -1,8 +1,8 @@
 schemaVersion: 1
 name: knowledge-index
-version: 1.0.0
+version: 3.0.0
 publisher: knowledge-index-platform
-releaseTag: contracts/knowledge-index/v1.0.0
+releaseTag: contracts/knowledge-index/v3.0.0
 
 writers:
   - name: deploy-sync

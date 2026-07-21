@@ -1,9 +1,105 @@
 # API contract
 
+## Query HTTP (Feature 003)
+
+Service-to-service retrieve API. **No end-user sessions** — consumers attach
+their own auth at the edge.
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/health` | None | Liveness |
+| `POST` | `/v1/retrieve` | Bearer `KNOWLEDGE_RETRIEVE_API_SECRET` | Two-stage retrieve |
+| `POST` | `/v1/chat` | Bearer | Retrieve + extractive/generative answer |
+| `GET` | `/v1/status` | Bearer | Manifest summary |
+| `POST` | `/v1/warm` | Bearer | Preload embed, rerank, and optional generator ONNX |
+
+Start: `npm run serve` (default `http://127.0.0.1:3921`).
+
+### `POST /v1/retrieve`
+
+**Request**
+
+```json
+{
+  "query": "natural language question",
+  "top_k": 5,
+  "min_score": 0.5,
+  "rerank": true,
+  "candidate_pool": 30
+}
+```
+
+**Response `200`**
+
+```json
+{
+  "chunks": [{ "essay_slug": "/posts/examined/...", "text": "...", "score": 1.2 }],
+  "ann_chunks": [],
+  "meta": {
+    "index_status": "index_current",
+    "manifest_digest": "sha256:...",
+    "stale": false,
+    "bi_encoder_model": "Xenova/all-MiniLM-L6-v2",
+    "rerank_model": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "rerank": true,
+    "model": "Xenova/ms-marco-MiniLM-L-6-v2"
+  }
+}
+```
+
+| Status | Condition |
+|--------|-----------|
+| 401 | Missing/invalid bearer |
+| 400 | Invalid body |
+| 503 | Index unavailable (`no_index` / `sync_failed`) |
+
+Pipeline: query expansion → bi-encoder embed → Upstash ANN → optional
+cross-encoder rerank (same models as write path).
+
+### `POST /v1/chat`
+
+Retrieve plus grounded answer composition (extractive default; optional Xenova
+generative when `GENERATOR_SYNTHESIZE=true` on the platform).
+
+**Request**
+
+```json
+{
+  "query": "what's catamorphism",
+  "top_k": 5,
+  "min_score": 0.5,
+  "rerank": true,
+  "synthesize": true
+}
+```
+
+**Response `200`**
+
+```json
+{
+  "answer": "As a catamorphism (fold): …",
+  "chunks": [{ "essay_slug": "/posts/examined/...", "text": "...", "score": 1.2 }],
+  "ann_chunks": [],
+  "meta": {
+    "answer_mode": "extractive",
+    "synthesized": false,
+    "generator_model": null,
+    "index_status": "index_current",
+    "rerank": true
+  },
+  "synthesis_fallback": false
+}
+```
+
+| Status | Condition |
+|--------|-----------|
+| 401 | Missing/invalid bearer |
+| 400 | Invalid body |
+| 503 | Index unavailable |
+
 ## CLI operations
 
-This platform exposes **operator CLIs** only. It does not ship HTTP routes,
-user sessions, or chat UI.
+Operator CLIs for index **writes** (Features 001–002):
 
 | Command | Writer | Purpose |
 |---------|--------|---------|
@@ -43,6 +139,12 @@ be set while archive backfill is active.
 | `UPSTASH_DAILY_WRITE_CAP` | No | Provider daily cap (default `10000`) |
 | `EMBED_BACKFILL_WRITE_BUDGET` | No | Backfill ceiling (default `9500`; MUST be `<` cap) |
 | `EMBED_CONVERSATION_ARCHIVES` | No | Must stay unset/false for default single-writer split |
+| `KNOWLEDGE_PLATFORM_PORT` | No | Query API listen port (default `3921`) |
+| `KNOWLEDGE_PLATFORM_HOST` | No | Bind host (default `127.0.0.1`) |
+| `KNOWLEDGE_RETRIEVE_API_SECRET` | Yes (prod) | Bearer token for `/v1/*` routes |
+| `KNOWLEDGE_RERANK` | No | Enable cross-encoder (default `true` off-platform) |
+| `GENERATOR_SYNTHESIZE` | No | Opt-in Xenova generative answers (default off) |
+| `GENERATOR_MODEL` | No | Default `Xenova/LaMini-Flan-T5-783M` when generative enabled |
 
 Corpus files are read from the producer checkout at `CORPUS_ROOT`. This
 platform never authors `content/` or `data/` essays.
@@ -72,5 +174,6 @@ operator retries the CLI.
 
 On batch failure: cursor unchanged; Airflow or operator retries.
 
-Neither CLI guarantees retrieval latency or answer quality — those are read
-consumer responsibilities.
+Query HTTP latency, rerank quality, and **extractive/generative answer
+composition** are owned by Feature **003** when consumers call `npm run serve`.
+Read consumers keep user auth and rate limits at the edge.

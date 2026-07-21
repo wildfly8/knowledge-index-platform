@@ -91,18 +91,18 @@ stub. Large archive bodies live under `data/unfolding-*` and are resolved at
 index time. Vector ids and slugs are derived from the stub path so deploy-sync
 and backfill share one id namespace without collision (disjoint file sets).
 
-### Index read surface (consumer)
+### Index read surface (Feature 003)
 
-Read consumers query the same Upstash index with a read token. Typical read
-flow (implemented in consumer apps, not this platform):
+Read consumers call the **query HTTP API** (`POST /v1/retrieve`) rather than
+embedding queries locally. The platform runs:
 
-1. Embed the user query with the same bi-encoder model family.
-2. ANN search over chunk vectors; filter `pre-examined` paths.
-3. Optional cross-encoder rerank on `(query, passage)` pairs.
-4. Return ranked chunks using the metadata schema above.
+1. Query expansion (domain glossary).
+2. Bi-encoder embed (`Xenova/all-MiniLM-L6-v2`).
+3. Upstash ANN search; filter `pre-examined` paths.
+4. Optional cross-encoder rerank (`Xenova/ms-marco-MiniLM-L-6-v2`).
+5. Return ranked chunks per metadata schema above.
 
-Auth, rate limits, and answer synthesis are **consumer-owned**. This contract
-defines index shape only.
+Auth and rate limits are **consumer-owned** at the app edge.
 
 ## Compatibility
 

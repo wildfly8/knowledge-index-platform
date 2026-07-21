@@ -12,14 +12,15 @@ For a deployed configuration, this platform:
 - resumes archive backfill from the last committed cursor after failure;
 - uses deterministic vector ids and content hashes for idempotent retries;
 - stores chunk metadata per `data-contract.md` without auth or user identity;
-- exposes operator CLIs and an optional Airflow DAG for scheduled backfill.
+- exposes operator CLIs, optional Airflow DAG, and the Feature **003** query HTTP API;
+- serves two-stage retrieve (bi-encoder ANN + cross-encoder rerank) and extractive/generative answer composition when `npm run serve` is running.
 
 ## Producer responsibilities
 
 The corpus producer (for example `agentic-foundation`) owns:
 
 - MDX stubs under `content/posts/` and archive bodies under `data/unfolding-*`;
-- site routing, authentication, and any retrieval or chat HTTP APIs;
+- site routing, authentication, and chat UI;
 - pointing `CORPUS_ROOT` at a checkout that contains the expected tree;
 - coordinating MAJOR contract upgrades with this platform and read consumers.
 
@@ -31,13 +32,10 @@ The producer MUST NOT upsert into the shared index. Deploy hooks may invoke
 This platform does not:
 
 - register, authenticate, or identify end users;
-- expose `POST /api/knowledge/retrieve` or any product HTTP API;
-- ship chat UI, answer composition, or generative synthesis;
+- ship chat UI (read consumers own the Ask page and session gate);
 - author or edit essay content in `content/` or `data/`;
-- guarantee retrieval latency, rerank quality, or chat SLOs;
 - run Pagefind, syndication, or site build pipelines;
-- provide a query API — read consumers use Upstash directly per the data
-  contract.
+- enforce per-user rate limits on behalf of consumers.
 
-Read consumers that need gated retrieval MUST implement access control in their
-own application boundary; the index itself is not an auth layer.
+Read consumers call Feature **003** query HTTP with a shared bearer secret and
+MUST implement end-user access control at their application boundary.

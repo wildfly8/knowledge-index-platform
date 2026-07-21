@@ -13,5 +13,5 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["lib/**/*.ts", "scripts/**/*.ts"]
+  "include": ["lib/**/*.ts", "scripts/**/*.ts", "server/**/*.ts"]
 }

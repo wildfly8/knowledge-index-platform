@@ -53,6 +53,14 @@ $expectedReferences = @{
     "``$version``",
     "contracts/knowledge-index/v$version"
   )
+  'specs/003-knowledge-query-api/contracts/query-api.md' = @(
+    "``$version``",
+    "contracts/knowledge-index/v$version"
+  )
+  'specs/001-posts-vector-index/contracts/vector-retrieval.md' = @(
+    "``$version``",
+    "contracts/knowledge-index/v$version"
+  )
 }
 
 foreach ($relativePath in $expectedReferences.Keys) {
@@ -69,7 +77,7 @@ foreach ($relativePath in $expectedReferences.Keys) {
 }
 
 $requiredSections = @{
-  'api-contract.md' = @('## CLI operations', '## Environment', '## Delivery and failure behavior')
+  'api-contract.md' = @('## Query HTTP', '## CLI operations', '## Environment', '## Delivery and failure behavior')
   'data-contract.md' = @('## Vector identity', '## Chunk metadata', '## Corpus paths', '## Compatibility')
   'capability.md' = @('## Platform guarantees', '## Producer responsibilities', '## Non-capabilities')
 }
