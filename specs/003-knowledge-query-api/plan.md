@@ -12,7 +12,7 @@ auth and chat composition while Xenova + Upstash run in this service.
 
 | Layer | Module | Notes |
 |-------|--------|-------|
-| HTTP | `server/index.ts`, `lib/server/router.ts` | `GET /health`, `POST /v1/retrieve`, `GET /v1/status`, `POST /v1/warm` |
+| HTTP | `server/index.ts`, `lib/server/router.ts`, `lib/server/transport-security.ts` | `GET /health`, `POST /v1/retrieve`, Cloud Run `PORT` bind, HTTPS redirect + HSTS |
 | Auth | `lib/server/auth.ts` | Bearer `KNOWLEDGE_RETRIEVE_API_SECRET` |
 | Retrieve | `lib/knowledge/retrieve-core.ts` | Manifest read, embed, ANN, rerank |
 | Expansion | `lib/knowledge/retrieve-query.ts` | Casual query expansion, score floors |

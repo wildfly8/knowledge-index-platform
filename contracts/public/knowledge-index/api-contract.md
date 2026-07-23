@@ -15,6 +15,25 @@ their own auth at the edge.
 
 Start: `npm run serve` (default `http://127.0.0.1:3921`).
 
+### Transport security (production / Cloud Run)
+
+TLS **terminates at the platform** (GCP Cloud Run, load balancer). The Node
+process listens on **HTTP only** (`PORT` or `KNOWLEDGE_PLATFORM_PORT`).
+
+| Concern | Behavior |
+|---------|----------|
+| Cloud Run HTTPS URL | Provided by GCP (`https://….run.app`); no in-container certs |
+| `X-Forwarded-Proto` | `https` → normal handling + `Strict-Transport-Security` |
+| Cleartext client (prod) | **308** redirect to `https://{host}{path}` when `KNOWLEDGE_REQUIRE_HTTPS=true` (default when `NODE_ENV=production`) |
+| `GET /health` | No redirect (liveness probes may use HTTP) |
+
+| Variable | Default (prod) | Purpose |
+|----------|----------------|---------|
+| `PORT` | Cloud Run sets `8080` | Listen port (overrides `KNOWLEDGE_PLATFORM_PORT`) |
+| `KNOWLEDGE_PLATFORM_HOST` | `0.0.0.0` | Bind address |
+| `KNOWLEDGE_REQUIRE_HTTPS` | `true` when `NODE_ENV=production` | Enforce HTTPS semantics via forwarded headers |
+| `KNOWLEDGE_HSTS_MAX_AGE` | `31536000` | HSTS `max-age` seconds |
+
 ### `POST /v1/retrieve`
 
 **Request**
@@ -139,8 +158,10 @@ be set while archive backfill is active.
 | `UPSTASH_DAILY_WRITE_CAP` | No | Provider daily cap (default `10000`) |
 | `EMBED_BACKFILL_WRITE_BUDGET` | No | Backfill ceiling (default `9500`; MUST be `<` cap) |
 | `EMBED_CONVERSATION_ARCHIVES` | No | Must stay unset/false for default single-writer split |
-| `KNOWLEDGE_PLATFORM_PORT` | No | Query API listen port (default `3921`) |
-| `KNOWLEDGE_PLATFORM_HOST` | No | Bind host (default `127.0.0.1`) |
+| `KNOWLEDGE_PLATFORM_PORT` | No | Query API listen port (default `3921`; ignored when `PORT` set) |
+| `KNOWLEDGE_PLATFORM_HOST` | No | Bind host (default `127.0.0.1`; `0.0.0.0` in production) |
+| `KNOWLEDGE_REQUIRE_HTTPS` | No | `true` in production — 308 redirect + trust `X-Forwarded-Proto` |
+| `KNOWLEDGE_HSTS_MAX_AGE` | No | HSTS header max-age (default `31536000`) |
 | `KNOWLEDGE_RETRIEVE_API_SECRET` | Yes (prod) | Bearer token for `/v1/*` routes |
 | `KNOWLEDGE_RERANK` | No | Enable cross-encoder (default `true` off-platform) |
 | `GENERATOR_SYNTHESIZE` | No | Opt-in Xenova generative answers (default off) |

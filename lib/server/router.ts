@@ -15,12 +15,24 @@ import { defaultRerankEnabled } from '@/lib/knowledge/rerank-meta'
 import { warmGenerator } from '@/lib/knowledge/generate'
 import { useGeneratorSynthesis } from '@/lib/knowledge/extractive'
 import { authorizeBearer } from '@/lib/server/auth'
+import {
+  httpsRedirectLocation,
+  requestIsSecure,
+  shouldRedirectToHttps,
+  transportSecurityHeaders
+} from '@/lib/server/transport-security'
 
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
+function sendJson(
+  res: ServerResponse,
+  req: IncomingMessage,
+  status: number,
+  body: unknown
+): void {
   const payload = JSON.stringify(body)
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Content-Length': Buffer.byteLength(payload)
+    'Content-Length': Buffer.byteLength(payload),
+    ...transportSecurityHeaders(requestIsSecure(req))
   })
   res.end(payload)
 }
@@ -43,20 +55,29 @@ export async function handleRequest(
   const path = url.pathname.replace(/\/+$/, '') || '/'
   const method = req.method ?? 'GET'
 
+  if (shouldRedirectToHttps(req, path)) {
+    res.writeHead(308, {
+      Location: httpsRedirectLocation(req, url),
+      ...transportSecurityHeaders(false)
+    })
+    res.end()
+    return
+  }
+
   if (path === '/health' && method === 'GET') {
-    sendJson(res, 200, { ok: true })
+    sendJson(res, req, 200, { ok: true })
     return
   }
 
   if (!authorizeBearer(req.headers.authorization)) {
-    sendJson(res, 401, { error: 'Unauthorized' })
+    sendJson(res, req, 401, { error: 'Unauthorized' })
     return
   }
 
   try {
     if (path === '/v1/status' && method === 'GET') {
       const summary = await getManifestSummary()
-      sendJson(res, 200, {
+      sendJson(res, req, 200, {
         index_status: summary.status,
         manifest_digest: summary.manifest_digest,
         vector_count: summary.vector_count,
@@ -82,7 +103,7 @@ export async function handleRequest(
         await warmGenerator()
         generator = { warmed: true }
       }
-      sendJson(res, 200, {
+      sendJson(res, req, 200, {
         embed_rerank_warmed: true,
         rerank_warmed: wantRerank,
         warm_ms: Date.now() - started,
@@ -97,7 +118,7 @@ export async function handleRequest(
       try {
         body = await readJsonBody(req)
       } catch {
-        sendJson(res, 400, { error: 'Invalid JSON body' })
+        sendJson(res, req, 400, { error: 'Invalid JSON body' })
         return
       }
 
@@ -108,7 +129,7 @@ export async function handleRequest(
       const candidate_pool = (body as { candidate_pool?: unknown }).candidate_pool
 
       if (typeof query !== 'string' || query.length < 1 || query.length > 2000) {
-        sendJson(res, 400, { error: 'query must be 1–2000 characters' })
+        sendJson(res, req, 400, { error: 'query must be 1–2000 characters' })
         return
       }
 
@@ -130,11 +151,11 @@ export async function handleRequest(
         result.meta.index_status === 'no_index' ||
         result.meta.index_status === 'sync_failed'
       ) {
-        sendJson(res, 503, { error: 'Index unavailable', meta: result.meta })
+        sendJson(res, req, 503, { error: 'Index unavailable', meta: result.meta })
         return
       }
 
-      sendJson(res, 200, {
+      sendJson(res, req, 200, {
         chunks: result.chunks,
         ann_chunks: result.annChunks,
         meta: result.meta
@@ -147,7 +168,7 @@ export async function handleRequest(
       try {
         body = await readJsonBody(req)
       } catch {
-        sendJson(res, 400, { error: 'Invalid JSON body' })
+        sendJson(res, req, 400, { error: 'Invalid JSON body' })
         return
       }
 
@@ -159,7 +180,7 @@ export async function handleRequest(
       const synthesize = (body as { synthesize?: unknown }).synthesize
 
       if (typeof query !== 'string' || query.length < 1 || query.length > 2000) {
-        sendJson(res, 400, { error: 'query must be 1–2000 characters' })
+        sendJson(res, req, 400, { error: 'query must be 1–2000 characters' })
         return
       }
 
@@ -184,11 +205,11 @@ export async function handleRequest(
         result.meta.index_status === 'no_index' ||
         result.meta.index_status === 'sync_failed'
       ) {
-        sendJson(res, 503, { error: 'Index unavailable', meta: result.meta })
+        sendJson(res, req, 503, { error: 'Index unavailable', meta: result.meta })
         return
       }
 
-      sendJson(res, 200, {
+      sendJson(res, req, 200, {
         answer: result.answer,
         chunks: result.chunks,
         ann_chunks: result.annChunks,
@@ -198,10 +219,10 @@ export async function handleRequest(
       return
     }
 
-    sendJson(res, 404, { error: 'Not found' })
+    sendJson(res, req, 404, { error: 'Not found' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal error'
     console.error('[knowledge-index-platform]', message)
-    sendJson(res, 500, { error: message })
+    sendJson(res, req, 500, { error: message })
   }
 }

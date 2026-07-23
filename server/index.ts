@@ -1,18 +1,24 @@
 import { createServer } from 'node:http'
 import { loadEnvFiles } from '@/lib/env/load-env'
 import { handleRequest } from '@/lib/server/router'
+import {
+  resolveListenHost,
+  resolveListenPort
+} from '@/lib/server/transport-security'
 
 loadEnvFiles()
 
-const port = Number(process.env.KNOWLEDGE_PLATFORM_PORT ?? '3921')
-const host = process.env.KNOWLEDGE_PLATFORM_HOST ?? '127.0.0.1'
+const port = resolveListenPort()
+const host = resolveListenHost()
 
 const server = createServer((req, res) => {
   void handleRequest(req, res)
 })
 
 server.listen(port, host, () => {
+  const scheme =
+    process.env.NODE_ENV === 'production' ? 'https (via proxy)' : 'http'
   console.log(
-    `[knowledge-index-platform] retrieve API http://${host}:${port} (v1/retrieve, v1/status, v1/warm)`
+    `[knowledge-index-platform] retrieve API listening on ${host}:${port} (${scheme})`
   )
 })

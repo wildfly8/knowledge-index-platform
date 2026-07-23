@@ -41,3 +41,28 @@ Set on the read consumer (agentic-foundation):
 
 The consumer keeps user auth and rate limits on `/api/knowledge/**`; it proxies
 retrieve/status/warm to this service.
+
+## Cloud Run (production HTTPS)
+
+GCP **Cloud Run terminates TLS** at the edge. The container serves **plain HTTP**
+on `PORT` (default `8080`); do not configure in-app TLS certificates.
+
+```powershell
+# Build (from repo root; requires models/transformers-cache — run prefetch:xenova first)
+docker build -f server/Dockerfile -t knowledge-query-api:latest .
+
+# Deploy (set secrets via Cloud Run console or --set-secrets)
+gcloud run deploy knowledge-query-api `
+  --image knowledge-query-api:latest `
+  --region us-central1 `
+  --port 8080 `
+  --set-env-vars NODE_ENV=production,KNOWLEDGE_REQUIRE_HTTPS=true `
+  --allow-unauthenticated   # still require bearer on /v1/* ; /health is public
+```
+
+Clients use the `https://….run.app` URL Cloud Run provides. Cloud Run sets
+`X-Forwarded-Proto: https` on user traffic; the app adds **HSTS** and returns
+**308** redirect if a client hits HTTP without TLS termination (when
+`KNOWLEDGE_REQUIRE_HTTPS=true`, default in production).
+
+Local dev stays `http://127.0.0.1:3921` unless you set `KNOWLEDGE_REQUIRE_HTTPS=true`.

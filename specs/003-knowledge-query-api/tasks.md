@@ -18,10 +18,12 @@ auth only — no end-user sessions in this repo.
 - [x] T006 Public contract query HTTP — `contracts/public/knowledge-index/` @ 3.0.0
 - [x] T007 Internal redirect — `contracts/query-api.md` → public package
 - [x] T008 `.env.example` — `KNOWLEDGE_RETRIEVE_API_SECRET`, `KNOWLEDGE_RERANK`, serve port
+- [x] T009 US3 Cloud Run HTTPS — `lib/server/transport-security.ts`, router 308+HSTS, `server/Dockerfile`, quickstart § Cloud Run
 
 ## Out of scope
 
 - User registration, OAuth, session management
+- In-container TLS termination (Cloud Run / LB terminates TLS)
 - Chat UI and per-user rate limits (read consumer)
 - Index writes (Features 001–002 only)
 

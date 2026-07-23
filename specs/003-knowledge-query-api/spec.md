@@ -67,9 +67,35 @@ cross-encoder rerank) over the shared Upstash index written by Features 001–00
 - **FR-004**: `POST /v1/warm` preloads embed + rerank ONNX in process memory
 - **FR-005**: `GET /health` unauthenticated liveness probe
 - **FR-006**: `POST /v1/chat` returns grounded extractive answers by default; optional Xenova generative when `GENERATOR_SYNTHESIZE=true`
+- **FR-007**: Production deployments MUST serve clients over HTTPS; the container listens on HTTP only and relies on the platform (e.g. GCP Cloud Run) to terminate TLS. When `KNOWLEDGE_REQUIRE_HTTPS` is enabled (default in `NODE_ENV=production`), insecure requests (no `X-Forwarded-Proto: https`) receive **308** redirect except `GET /health`. Secure responses include `Strict-Transport-Security`.
+
+## User stories
+
+### US1 — Operator runs local retrieve API (P1) ✓
+
+Operator starts `npm run serve`, calls `/v1/retrieve` with bearer secret on loopback HTTP.
+
+### US2 — Consumer proxies chat retrieve (P1) ✓
+
+Read consumer calls platform over HTTP with shared bearer; no end-user auth in this repo.
+
+### US3 — Production HTTPS on Cloud Run (P2)
+
+As an operator deploying the query API to **GCP Cloud Run**, I want TLS terminated at the platform edge with HTTPS enforced for external API traffic, so clients never use cleartext HTTP in production.
+
+**Acceptance**
+
+1. Container binds `0.0.0.0` and honors Cloud Run `PORT` (default `8080`).
+2. No in-container TLS listener — Cloud Run provides HTTPS URLs (`*.run.app`).
+3. Requests with `X-Forwarded-Proto: http` get **308** to `https://…` (except `GET /health` for probes).
+4. Responses on HTTPS requests include HSTS (`Strict-Transport-Security`).
+5. Local dev (`NODE_ENV≠production`) remains plain HTTP on `127.0.0.1:3921` unless `KNOWLEDGE_REQUIRE_HTTPS=true`.
+
+**Implementation**: `lib/server/transport-security.ts`, `server/Dockerfile`, quickstart § Cloud Run.
 
 ## Out of scope
 
 - User registration, OAuth, or session management
+- In-container TLS certificates (mTLS, `https.createServer`) — Cloud Run / load balancer owns termination
 - Chat UI (consumer owns `/chat` and session gate)
 - Rate limiting per end-user (consumer responsibility)
