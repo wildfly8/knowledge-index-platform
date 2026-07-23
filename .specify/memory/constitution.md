@@ -80,8 +80,8 @@ Airflow over a permanent always-on service until traffic requires it.
 
 - **Runtime**: Node 20+, TypeScript (`tsx`), `@upstash/vector`, Xenova /
   Transformers.js ONNX
-- **Orchestration**: Apache Airflow (Docker Compose standalone) for Feature
-  002 daily budget drain at 01:00 UTC
+- **Orchestration**: Apache Airflow with **KubernetesExecutor** on k3s (Feature 004) for
+  Feature 002 daily budget drain at 01:00 UTC; Docker Compose standalone is deprecated
 - **Index**: Upstash Vector free tier; daily write cap enforced in code
 - **Secrets**: `.env` gitignored; never commit Upstash tokens
 
@@ -106,6 +106,7 @@ Airflow over a permanent always-on service until traffic requires it.
 | 001 | Posts vector index (deploy sync) | Public contract deploy-sync writer |
 | 002 | Budgeted archive embedding backfill | Public contract archive-backfill writer |
 | 003 | Knowledge query API | HTTP retrieve + rerank (`npm run serve`) |
+| 004 | Kubernetes Airflow executor (k3s) | Pod-per-task backfill orchestration |
 
 ## Quality Gates
 
@@ -120,7 +121,7 @@ editorial review of `spec.md` plus the gates below.
 | Backfill | Budget validate + dry-run plan | `npm run embed:backfill -- --dry-run` |
 | Backfill verify | Manifest vs live vectors (read-only) | `npm run embed:backfill -- --verify` |
 | Query API | Retrieve smoke | `npm run serve` + quickstart § Smoke test |
-| Airflow | DAG parses; compose up healthy | `docker compose` in `airflow/` |
+| Airflow | k3s executor smoke (004) **or** legacy compose | Feature 004 quickstart + `airflow/k8s/scripts/smoke-dag.ps1` **or** `docker compose` in `airflow/` (deprecated) |
 
 ## Artifact Precedence
 

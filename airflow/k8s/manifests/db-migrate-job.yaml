@@ -1,0 +1,26 @@
+# One-shot DB migrate when Helm migrate job does not complete before scheduler init.
+# Applied by bootstrap-k3d-dev.ps1 after Airflow Helm install.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: airflow-db-migrate
+  namespace: knowledge-airflow
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: knowledge-index-airflow-worker:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - airflow db migrate
+          env:
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: knowledge-airflow-metadata
+                  key: connection

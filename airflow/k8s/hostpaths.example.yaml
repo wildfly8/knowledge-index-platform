@@ -1,0 +1,30 @@
+# Host path tuning for Feature 004 (k3s dev mounts)
+#
+# Kubernetes sees Linux paths inside the cluster VM. On Windows dev machines:
+#
+# | Environment        | Platform repo path                                      | Corpus path                                      |
+# |--------------------|---------------------------------------------------------|--------------------------------------------------|
+# | Rancher Desktop    | /mnt/c/my_projects/knowledge-index-platform             | /mnt/c/my_projects/agentic-foundation            |
+# | WSL2 k3s           | /mnt/c/my_projects/knowledge-index-platform             | /mnt/c/my_projects/agentic-foundation            |
+# | Native Linux       | /home/<user>/my_projects/knowledge-index-platform       | /home/<user>/my_projects/agentic-foundation      |
+#
+# Apply paths in ALL THREE places (keep them consistent):
+#   1. airflow/k8s/chart/platform-local/values-rancher.yaml  (task pod hostPath)
+#   2. airflow/k8s/helm/values-rancher.yaml                    (scheduler/webserver mounts)
+#   3. k3d: named volume knowledge-airflow-logs → /var/lib/knowledge-airflow-logs
+#
+# Logs: Docker named volume on k3d nodes (not in git). Survives worker pod deletion.
+#
+# Rancher Desktop: enable file sharing for C:\my_projects in Settings → Resources.
+
+rancherDesktop:
+  platform: /mnt/c/my_projects/knowledge-index-platform
+  corpus: /mnt/c/my_projects/agentic-foundation
+  dags: /mnt/c/my_projects/knowledge-index-platform/airflow/dags
+  logs: /var/lib/knowledge-airflow-logs
+
+wsl2:
+  platform: /mnt/c/my_projects/knowledge-index-platform
+  corpus: /mnt/c/my_projects/agentic-foundation
+  dags: /mnt/c/my_projects/knowledge-index-platform/airflow/dags
+  logs: /var/lib/knowledge-airflow-logs

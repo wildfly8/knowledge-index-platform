@@ -1,0 +1,26 @@
+namespace: knowledge-airflow
+configMapName: knowledge-airflow-pod-template
+
+postgres:
+  image: postgres:16-alpine
+  user: airflow
+  password: airflow
+  database: airflow
+  host: knowledge-postgres.knowledge-airflow.svc.cluster.local
+
+hostPaths:
+  platform: /mnt/c/my_projects/knowledge-index-platform
+  corpus: /mnt/c/my_projects/agentic-foundation
+  dags: /mnt/c/my_projects/knowledge-index-platform/airflow/dags
+  # k3d named volume (bootstrap --volume knowledge-airflow-logs:...)
+  logs: /var/lib/knowledge-airflow-logs
+
+worker:
+  image: knowledge-index-airflow-worker:latest
+  resources:
+    requests:
+      cpu: "1"
+      memory: 4Gi
+    limits:
+      cpu: "2"
+      memory: 6Gi

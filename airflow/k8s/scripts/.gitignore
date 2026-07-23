@@ -1,0 +1,2 @@
+# Local CLI tools downloaded by k8s bootstrap scripts (k3d, helm)
+.tools/

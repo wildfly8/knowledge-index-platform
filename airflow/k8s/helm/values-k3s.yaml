@@ -1,0 +1,102 @@
+# Feature 004 — k3s Helm values overlay for Apache Airflow chart
+# Install: see specs/004-k8s-airflow-executor/quickstart.md
+# Pin chart 1.15.0 — matches Airflow 2.9.3 in airflow/Dockerfile
+
+airflowChartVersion: "1.15.0"
+
+executor: KubernetesExecutor
+
+airflowVersion: "2.9.3"
+
+# Airflow image runs as UID 50000; hostPath logs dir must be group-writable.
+uid: 50000
+gid: 0
+
+images:
+  airflow:
+    repository: knowledge-index-airflow-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# KubernetesExecutor: task pods use pod-template.yaml
+config:
+  core:
+    load_examples: "False"
+    dags_folder: /opt/airflow/dags
+  kubernetes_executor:
+    namespace: knowledge-airflow
+    pod_template_file: /opt/pod-template/pod-template.yaml
+    worker_container_repository: knowledge-index-airflow-worker
+    worker_container_tag: latest
+    delete_worker_pods: "True"
+    delete_worker_pods_on_failure: "False"
+  logging:
+    base_log_folder: /opt/airflow/shared-logs
+
+# DAGs mounted via hostPath in values-rancher.yaml (dev). Enable persistence for git-sync prod.
+dags:
+  persistence:
+    enabled: false
+  mountPath: /opt/airflow/dags
+
+# Pod template + DAG hostPath: set per-component in values-rancher.yaml (chart 1.15).
+
+webserver:
+  service:
+    type: ClusterIP
+  env:
+    - name: AIRFLOW__WEBSERVER__BASE_URL
+      value: "http://localhost:8080"
+    - name: AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX
+      value: "True"
+    - name: AIRFLOW__LOGGING__BASE_LOG_FOLDER
+      value: "/opt/airflow/shared-logs"
+  defaultUser:
+    enabled: true
+    username: admin
+    password: admin
+    # Change in production
+
+scheduler:
+  resources:
+    requests:
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  env:
+    - name: AIRFLOW__CORE__PARALLELISM
+      value: "4"
+    - name: AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG
+      value: "2"
+
+# Celery worker StatefulSet not used with KubernetesExecutor
+workers:
+  replicas: 0
+
+postgresql:
+  enabled: false
+
+data:
+  metadataConnection:
+    user: airflow
+    pass: airflow
+    protocol: postgresql
+    host: knowledge-postgres.knowledge-airflow.svc.cluster.local
+    port: 5432
+    db: airflow
+    sslmode: disable
+
+redis:
+  enabled: false
+
+flower:
+  enabled: false
+
+statsd:
+  enabled: false
+
+migrateDatabaseJob:
+  enabled: false
+
+createUserJob:
+  useHelmHooks: false

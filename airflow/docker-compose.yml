@@ -1,4 +1,6 @@
-# Airflow standalone for Feature 002 archive embedding backfill.
+# DEPRECATED — Legacy standalone Airflow for Feature 002 smoke only.
+# Default operator path: k8s (Feature 004). See airflow/README.md and airflow/k8s/README.md.
+#
 # Usage (from this repo's airflow/):
 #   docker compose build
 #   docker compose up -d

@@ -1,1 +1,3 @@
-{"feature_directory":"specs/001-posts-vector-index"}
+{
+  "feature_directory": "specs/004-k8s-airflow-executor"
+}

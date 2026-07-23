@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: knowledge-airflow
+  labels:
+    app.kubernetes.io/part-of: knowledge-index-platform
+    feature: "004-k8s-airflow-executor"

@@ -1,0 +1,52 @@
+# Rancher Desktop / k3d hostPath overlay for apache-airflow Helm chart 1.15.0.
+# Merge: helm upgrade ... -f values-k3s.yaml -f values-rancher.yaml
+#
+# Chart 1.15 applies extraVolumes per component (not top-level). Tune paths in
+# ../hostpaths.example.yaml for your workstation.
+
+dagsHostPath: /mnt/c/my_projects/knowledge-index-platform/airflow/dags
+logsHostPath: /var/lib/knowledge-airflow-logs
+
+x-airflow-dev-volumes: &airflow-dev-volumes
+  - name: pod-template
+    configMap:
+      name: knowledge-airflow-pod-template
+  - name: dags-host
+    hostPath:
+      path: /mnt/c/my_projects/knowledge-index-platform/airflow/dags
+      type: Directory
+  - name: airflow-logs
+    hostPath:
+      path: /var/lib/knowledge-airflow-logs
+      type: DirectoryOrCreate
+
+x-airflow-dev-volume-mounts: &airflow-dev-volume-mounts
+  - name: pod-template
+    mountPath: /opt/pod-template
+    readOnly: true
+  - name: dags-host
+    mountPath: /opt/airflow/dags
+    readOnly: true
+  - name: airflow-logs
+    mountPath: /opt/airflow/shared-logs
+
+scheduler:
+  extraVolumes: *airflow-dev-volumes
+  extraVolumeMounts: *airflow-dev-volume-mounts
+  securityContexts:
+    pod:
+      fsGroup: 50000
+
+webserver:
+  extraVolumes: *airflow-dev-volumes
+  extraVolumeMounts: *airflow-dev-volume-mounts
+  securityContexts:
+    pod:
+      fsGroup: 50000
+
+triggerer:
+  extraVolumes: *airflow-dev-volumes
+  extraVolumeMounts: *airflow-dev-volume-mounts
+  securityContexts:
+    pod:
+      fsGroup: 50000

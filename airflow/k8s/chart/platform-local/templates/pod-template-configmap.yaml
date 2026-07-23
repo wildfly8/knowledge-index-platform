@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configMapName }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: platform-local
+    app.kubernetes.io/component: pod-template
+data:
+  pod-template.yaml: |
+{{ include "platform-local.podTemplate" . | nindent 4 }}

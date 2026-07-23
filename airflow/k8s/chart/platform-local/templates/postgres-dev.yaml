@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: knowledge-postgres
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: platform-local
+    app.kubernetes.io/component: postgres
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: knowledge-postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: knowledge-postgres
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: platform-local
+    app.kubernetes.io/component: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: knowledge-postgres
+  template:
+    metadata:
+      labels:
+        app: knowledge-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U {{ .Values.postgres.user }} -d {{ .Values.postgres.database }}
+            initialDelaySeconds: 5
+            periodSeconds: 5

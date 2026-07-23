@@ -1,0 +1,7 @@
+# Rancher Desktop (k3s) — Windows host file sharing via /mnt/c/...
+# Copy and edit paths if your checkout lives elsewhere.
+hostPaths:
+  platform: /mnt/c/my_projects/knowledge-index-platform
+  corpus: /mnt/c/my_projects/agentic-foundation
+  dags: /mnt/c/my_projects/knowledge-index-platform/airflow/dags
+  logs: /var/lib/knowledge-airflow-logs

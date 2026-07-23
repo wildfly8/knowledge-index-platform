@@ -151,3 +151,4 @@ docker compose up -d
 | 001 | `specs/001-posts-vector-index` | Deploy sync + index contract |
 | 002 | `specs/002-archive-embed-backfill` | Budgeted backfill + Airflow |
 | 003 | `specs/003-knowledge-query-api` | Query HTTP (`npm run serve`) |
+| 004 | `specs/004-k8s-airflow-executor` | Airflow KubernetesExecutor on k3s |

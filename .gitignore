@@ -11,4 +11,5 @@ lib/knowledge/backfill-manifest.json
 airflow/.env
 airflow/.env.*
 !airflow/.env.example
+airflow/k8s/manifests/secrets.local.yaml
 **/__pycache__/
