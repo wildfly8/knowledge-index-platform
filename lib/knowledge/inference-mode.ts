@@ -14,6 +14,7 @@ export function useKnowledgeInferenceWorker(): boolean {
   if (flag === '1' || flag === 'true' || flag === 'on') return true
   if (process.env.VERCEL) return false
   if (process.env.NEXT_RUNTIME === 'edge') return false
+  if (process.env.NODE_ENV === 'production') return false
   // Local Node CLI — isolate models from the parent heap.
   return true
 }

@@ -107,6 +107,7 @@ Airflow over a permanent always-on service until traffic requires it.
 | 002 | Budgeted archive embedding backfill | Public contract archive-backfill writer |
 | 003 | Knowledge query API | HTTP retrieve + rerank (`npm run serve`) |
 | 004 | Kubernetes Airflow executor (k3s) | Pod-per-task backfill orchestration |
+| 005 | Cloud Run query API | Terraform + container deploy for Feature 003 |
 
 ## Quality Gates
 
@@ -121,6 +122,7 @@ editorial review of `spec.md` plus the gates below.
 | Backfill | Budget validate + dry-run plan | `npm run embed:backfill -- --dry-run` |
 | Backfill verify | Manifest vs live vectors (read-only) | `npm run embed:backfill -- --verify` |
 | Query API | Retrieve smoke | `npm run serve` + quickstart § Smoke test |
+| Cloud Run (005) | IaC validate + cloud E2E | `npm run test:iac`; `npm run test:e2e:cloud` after deploy |
 | Airflow | k3s executor smoke (004) **or** legacy compose | Feature 004 quickstart + `airflow/k8s/scripts/smoke-dag.ps1` **or** `docker compose` in `airflow/` (deprecated) |
 
 ## Artifact Precedence

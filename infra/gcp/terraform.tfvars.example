@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars (gitignored) or run provision.ps1 -Phase check to seed from otel.
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+
+enable_foundation = false
+enable_runtime    = false
+service_name      = "knowledge-query-api"
+query_image       = ""
+
+# From .env — never commit real values:
+# upstash_vector_rest_url   = "https://..."
+# upstash_vector_rest_token = "..."
+# retrieve_api_secret       = "replace-with-32+-byte-secret"
+
+upstash_vector_rest_url   = ""
+upstash_vector_rest_token = ""
+retrieve_api_secret       = ""
