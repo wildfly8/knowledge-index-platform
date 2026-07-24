@@ -2,7 +2,7 @@
 
 > **Not a published contract.** Normative surface:
 > [`contracts/public/knowledge-index`](../../../contracts/public/knowledge-index/README.md)
-> @ **`3.0.0`** — release tag `contracts/knowledge-index/v3.0.0`.
+> @ **`4.0.0`** — release tag `contracts/knowledge-index/v4.0.0`.
 
 Query HTTP routes, request/response shapes, and auth for Feature
 **003-knowledge-query-api** are defined in the public package:

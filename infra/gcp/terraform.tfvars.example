@@ -15,3 +15,9 @@ query_image       = ""
 upstash_vector_rest_url   = ""
 upstash_vector_rest_token = ""
 retrieve_api_secret       = ""
+
+# Feature 006 chat persistence (Neon + Gemini):
+# enable_chat_persistence = false
+# postgres_url            = "postgresql://...@...-pooler....neon.tech/knowledge?sslmode=require"
+# gemini_api_key          = ""
+# llm_provider            = "gemini"

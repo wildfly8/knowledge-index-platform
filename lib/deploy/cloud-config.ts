@@ -10,6 +10,13 @@ export type TfvarsSeed = {
   region: string | null
 }
 
+export type ChatPersistenceTfvars = {
+  enabled: boolean
+  postgresUrl: string | null
+  geminiApiKey: string | null
+  llmProvider: string | null
+}
+
 const PLACEHOLDER = /^(REPLACE_|your-|replace-with|$)/i
 
 export function parseTfvarLine(content: string, name: string): string | null {
@@ -17,6 +24,26 @@ export function parseTfvarLine(content: string, name: string): string | null {
   const match = content.match(pattern)
   if (!match) return null
   return match[1].trim().replace(/^"/, '').replace(/"$/, '')
+}
+
+export function parseChatPersistenceTfvars(content: string): ChatPersistenceTfvars {
+  const enabledRaw = parseTfvarLine(content, 'enable_chat_persistence')
+  return {
+    enabled: enabledRaw === 'true',
+    postgresUrl: parseTfvarLine(content, 'postgres_url'),
+    geminiApiKey: parseTfvarLine(content, 'gemini_api_key'),
+    llmProvider: parseTfvarLine(content, 'llm_provider')
+  }
+}
+
+export function missingChatPersistenceFields(
+  config: ChatPersistenceTfvars
+): string[] {
+  if (!config.enabled) return []
+  const missing: string[] = []
+  if (isPlaceholder(config.postgresUrl)) missing.push('postgres_url')
+  if (isPlaceholder(config.geminiApiKey)) missing.push('gemini_api_key')
+  return missing
 }
 
 export function parseTfvarsSeed(content: string): TfvarsSeed {

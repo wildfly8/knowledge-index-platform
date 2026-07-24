@@ -95,7 +95,8 @@ Airflow over a permanent always-on service until traffic requires it.
 | Essay/MDX content + `data/` archives | Producer (`agentic-foundation`) |
 | Chat UI | Read consumer (producer app) |
 | Extractive/generative answers | **This project** (Feature 003 `/v1/chat`) |
-| Query HTTP (retrieve / status / warm) | **This project** (Feature 003) |
+| Query HTTP (retrieve / status / warm / chat) | **This project** (Feature 003/006) |
+| Conversation history (PostgreSQL) | **This project** (Feature 006; Neon, dedicated DB) |
 | Auth gate for product APIs | Read consumer |
 | Chat SLOs / OTel product metrics | Read consumer / OTel platform |
 
@@ -108,6 +109,7 @@ Airflow over a permanent always-on service until traffic requires it.
 | 003 | Knowledge query API | HTTP retrieve + rerank (`npm run serve`) |
 | 004 | Kubernetes Airflow executor (k3s) | Pod-per-task backfill orchestration |
 | 005 | Cloud Run query API | Terraform + container deploy for Feature 003 |
+| 006 | Chat persistence & external LLM | Neon Postgres + LLM spike; Cloud Run secrets (extends 005) |
 
 ## Quality Gates
 
@@ -123,6 +125,7 @@ editorial review of `spec.md` plus the gates below.
 | Backfill verify | Manifest vs live vectors (read-only) | `npm run embed:backfill -- --verify` |
 | Query API | Retrieve smoke | `npm run serve` + quickstart § Smoke test |
 | Cloud Run (005) | IaC validate + cloud E2E | `npm run test:iac`; `npm run test:e2e:cloud` after deploy |
+| Chat persistence (006) | Neon migrate + Cloud Run E2E | `npm run db:migrate`; `npm run test:e2e:cloud` with `enable_chat_persistence` |
 | Airflow | k3s executor smoke (004) **or** legacy compose | Feature 004 quickstart + `airflow/k8s/scripts/smoke-dag.ps1` **or** `docker compose` in `airflow/` (deprecated) |
 
 ## Artifact Precedence

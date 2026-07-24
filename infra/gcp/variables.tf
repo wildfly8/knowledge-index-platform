@@ -58,3 +58,29 @@ variable "retrieve_api_secret" {
   sensitive   = true
   default     = ""
 }
+
+variable "enable_chat_persistence" {
+  description = "Mount Neon POSTGRES_URL and optional LLM secrets on query-api."
+  type        = bool
+  default     = false
+}
+
+variable "postgres_url" {
+  description = "Neon pooled connection string (POSTGRES_URL)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "gemini_api_key" {
+  description = "Gemini API key for external LLM spike."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "llm_provider" {
+  description = "LLM provider name (e.g. gemini)."
+  type        = string
+  default     = "gemini"
+}

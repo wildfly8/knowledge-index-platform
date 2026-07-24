@@ -9,7 +9,8 @@ their own auth at the edge.
 |--------|------|------|---------|
 | `GET` | `/health` | None | Liveness |
 | `POST` | `/v1/retrieve` | Bearer `KNOWLEDGE_RETRIEVE_API_SECRET` | Two-stage retrieve |
-| `POST` | `/v1/chat` | Bearer | Retrieve + extractive/generative answer |
+| `POST` | `/v1/chat` | Bearer | Retrieve + answer (stateless or persisted thread) |
+| `GET` | `/v1/conversations/:id/messages` | Bearer | List persisted conversation messages |
 | `GET` | `/v1/status` | Bearer | Manifest summary |
 | `POST` | `/v1/warm` | Bearer | Preload embed, rerank, and optional generator ONNX |
 
@@ -78,24 +79,36 @@ cross-encoder rerank (same models as write path).
 ### `POST /v1/chat`
 
 Retrieve plus grounded answer composition (extractive default; optional Xenova
-generative when `GENERATOR_SYNTHESIZE=true` on the platform).
+generative when `GENERATOR_SYNTHESIZE=true`, or external LLM when
+`LLM_PROVIDER` is configured and persistence is enabled).
 
 **Request**
 
 ```json
 {
   "query": "what's catamorphism",
+  "conversation_id": "uuid-optional",
+  "title": "optional-new-thread-label",
   "top_k": 5,
   "min_score": 0.5,
   "rerank": true,
-  "synthesize": true
+  "synthesize": true,
+  "use_external_llm": true
 }
 ```
+
+| Field | Notes |
+|-------|-------|
+| `conversation_id` | Omit for stateless Feature 003 behavior (no PostgreSQL writes) |
+| `title` | Creates a new persisted thread when `POSTGRES_URL` is configured |
+| `use_external_llm` | Default `true` when `LLM_PROVIDER` configured; `false` forces extractive |
 
 **Response `200`**
 
 ```json
 {
+  "conversation_id": "uuid-or-null",
+  "message_id": "uuid-or-null",
   "answer": "As a catamorphism (fold): …",
   "chunks": [{ "essay_slug": "/posts/examined/...", "text": "...", "score": 1.2 }],
   "ann_chunks": [],
@@ -103,6 +116,9 @@ generative when `GENERATOR_SYNTHESIZE=true` on the platform).
     "answer_mode": "extractive",
     "synthesized": false,
     "generator_model": null,
+    "llm_provider": "gemini",
+    "llm_model": "gemini-2.0-flash",
+    "llm_fallback": false,
     "index_status": "index_current",
     "rerank": true
   },
@@ -114,7 +130,29 @@ generative when `GENERATOR_SYNTHESIZE=true` on the platform).
 |--------|-----------|
 | 401 | Missing/invalid bearer |
 | 400 | Invalid body |
-| 503 | Index unavailable |
+| 404 | Unknown `conversation_id` |
+| 503 | Index unavailable or persistence disabled when `conversation_id` / `title` used |
+
+### `GET /v1/conversations/:id/messages`
+
+Bearer required. Query: `limit` (default 50, max 200), `before` (message id cursor).
+
+**Response `200`**
+
+```json
+{
+  "conversation_id": "uuid",
+  "messages": [
+    { "id": "uuid", "role": "user", "content": "...", "created_at": "ISO8601" },
+    { "id": "uuid", "role": "assistant", "content": "...", "created_at": "ISO8601" }
+  ]
+}
+```
+
+| Status | Condition |
+|--------|-----------|
+| 404 | Unknown conversation |
+| 503 | Persistence unavailable (`POSTGRES_URL` not configured) |
 
 ## CLI operations
 
@@ -166,6 +204,11 @@ be set while archive backfill is active.
 | `KNOWLEDGE_RERANK` | No | Enable cross-encoder (default `true` off-platform) |
 | `GENERATOR_SYNTHESIZE` | No | Opt-in Xenova generative answers (default off) |
 | `GENERATOR_MODEL` | No | Default `Xenova/LaMini-Flan-T5-783M` when generative enabled |
+| `POSTGRES_URL` | No | Neon pooled URL for conversation persistence (Feature 006) |
+| `DATABASE_URL` | No | Alias for `POSTGRES_URL` |
+| `LLM_PROVIDER` | No | External LLM provider (`gemini` spike) |
+| `GEMINI_API_KEY` | No | Gemini API key when `LLM_PROVIDER=gemini` |
+| `GEMINI_MODEL` | No | Default `gemini-2.0-flash` |
 
 Corpus files are read from the producer checkout at `CORPUS_ROOT`. This
 platform never authors `content/` or `data/` essays.

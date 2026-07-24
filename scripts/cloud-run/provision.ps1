@@ -14,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($OtelRepoRoot)) {
 $gcpDir = Join-Path $root 'infra\gcp'
 $gcpTfvars = Join-Path $gcpDir 'terraform.tfvars'
 $otelGcpTfvars = Join-Path $OtelRepoRoot 'infra\gcp\terraform.tfvars'
-$imageTag = '0.1.1'
+$imageTag = '0.1.2'
 
 function Test-Placeholder([string]$Value) {
   return [string]::IsNullOrWhiteSpace($Value) -or $Value -match '^(REPLACE_|your-|replace-with|$)'
@@ -122,6 +122,30 @@ function Sync-RuntimeSecretsFromEnv {
   $content = $content -replace '(?m)^upstash_vector_rest_url\s*=.*', "upstash_vector_rest_url   = `"$($dot['UPSTASH_VECTOR_REST_URL'])`""
   $content = $content -replace '(?m)^upstash_vector_rest_token\s*=.*', "upstash_vector_rest_token = `"$($dot['UPSTASH_VECTOR_REST_TOKEN'])`""
   $content = $content -replace '(?m)^retrieve_api_secret\s*=.*', "retrieve_api_secret       = `"$retrieveSecret`""
+  if ($dot['POSTGRES_URL']) {
+    if ($content -notmatch '(?m)^enable_chat_persistence\s*=') {
+      $content += "`nenable_chat_persistence = true`n"
+    }
+    else {
+      $content = $content -replace '(?m)^enable_chat_persistence\s*=.*', 'enable_chat_persistence = true'
+    }
+    $content = $content -replace '(?m)^postgres_url\s*=.*', "postgres_url              = `"$($dot['POSTGRES_URL'])`""
+    if ($content -notmatch '(?m)^postgres_url\s*=') {
+      $content += "postgres_url              = `"$($dot['POSTGRES_URL'])`"`n"
+    }
+  }
+  if ($dot['GEMINI_API_KEY']) {
+    $content = $content -replace '(?m)^gemini_api_key\s*=.*', "gemini_api_key            = `"$($dot['GEMINI_API_KEY'])`""
+    if ($content -notmatch '(?m)^gemini_api_key\s*=') {
+      $content += "gemini_api_key            = `"$($dot['GEMINI_API_KEY'])`"`n"
+    }
+  }
+  if ($dot['LLM_PROVIDER']) {
+    $content = $content -replace '(?m)^llm_provider\s*=.*', "llm_provider              = `"$($dot['LLM_PROVIDER'])`""
+    if ($content -notmatch '(?m)^llm_provider\s*=') {
+      $content += "llm_provider              = `"$($dot['LLM_PROVIDER'])`"`n"
+    }
+  }
   Set-Content -LiteralPath $gcpTfvars -Value $content -Encoding utf8 -NoNewline
   if ($dot['KNOWLEDGE_RETRIEVE_API_SECRET'] -ne $retrieveSecret) {
     $lines = Get-Content $envFile

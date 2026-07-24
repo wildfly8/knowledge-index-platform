@@ -2,7 +2,7 @@
 
 > **Not a published contract.** Normative surface:
 > [`contracts/public/knowledge-index`](../../../contracts/public/knowledge-index/README.md)
-> @ **`3.0.0`** — release tag `contracts/knowledge-index/v3.0.0`.
+> @ **`4.0.0`** — release tag `contracts/knowledge-index/v4.0.0`.
 
 Deploy-sync writer scope, CLI behavior, and saga alignment for Feature
 **001-posts-vector-index** are defined in the public package:

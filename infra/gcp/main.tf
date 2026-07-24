@@ -6,11 +6,16 @@ locals {
     "run.googleapis.com",
     "secretmanager.googleapis.com",
   ])
-  secrets = var.enable_runtime ? {
+  base_secrets = var.enable_runtime ? {
     upstash-url    = var.upstash_vector_rest_url
     upstash-token  = var.upstash_vector_rest_token
     retrieve-token = var.retrieve_api_secret
   } : {}
+  chat_secrets = var.enable_runtime && var.enable_chat_persistence ? {
+    postgres-url   = var.postgres_url
+    gemini-api-key = var.gemini_api_key
+  } : {}
+  secrets = merge(local.base_secrets, local.chat_secrets)
 }
 
 resource "google_project_service" "required" {
@@ -141,6 +146,40 @@ resource "google_cloud_run_v2_service" "query_api" {
         }
       }
 
+      dynamic "env" {
+        for_each = var.enable_chat_persistence ? [1] : []
+        content {
+          name = "POSTGRES_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.runtime["postgres-url"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.enable_chat_persistence ? [1] : []
+        content {
+          name = "GEMINI_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.runtime["gemini-api-key"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.enable_chat_persistence ? [1] : []
+        content {
+          name  = "LLM_PROVIDER"
+          value = var.llm_provider
+        }
+      }
+
       ports {
         container_port = 8080
       }
@@ -162,9 +201,13 @@ resource "google_cloud_run_v2_service" "query_api" {
         length(var.query_image) > 0 &&
         length(var.upstash_vector_rest_url) > 0 &&
         length(var.upstash_vector_rest_token) > 0 &&
-        length(var.retrieve_api_secret) >= 32
+        length(var.retrieve_api_secret) >= 32 &&
+        (
+          !var.enable_chat_persistence ||
+          (length(var.postgres_url) > 0 && length(var.gemini_api_key) > 0)
+        )
       )
-      error_message = "Runtime requires pinned image, Upstash credentials, and retrieve_api_secret (32+ chars)."
+      error_message = "Runtime requires pinned image, Upstash credentials, retrieve_api_secret (32+ chars), and chat secrets when enable_chat_persistence is true."
     }
   }
 

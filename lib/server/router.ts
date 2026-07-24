@@ -1,9 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { warmEmbedRuntime } from '@/lib/knowledge/embed-runtime'
+import { ConversationRepo } from '@/lib/chat/conversation-repo'
 import {
-  answerWithRag,
-  type ChatAnswerResult
-} from '@/lib/knowledge/chat-core'
+  conversationalAnswer,
+  persistenceRequired,
+  shouldPersistConversation
+} from '@/lib/chat/conversational-rag'
+import { persistenceEnabled } from '@/lib/db/postgres-url'
+import { warmEmbedRuntime } from '@/lib/knowledge/embed-runtime'
+import { answerWithRag } from '@/lib/knowledge/chat-core'
 import {
   getManifestSummary,
   retrieveKnowledge,
@@ -163,6 +167,44 @@ export async function handleRequest(
       return
     }
 
+    const conversationMessagesMatch = path.match(
+      /^\/v1\/conversations\/([^/]+)\/messages$/
+    )
+    if (conversationMessagesMatch && method === 'GET') {
+      if (!persistenceEnabled()) {
+        sendJson(res, req, 503, { error: 'Persistence unavailable' })
+        return
+      }
+
+      const conversationId = decodeURIComponent(conversationMessagesMatch[1])
+      const limitRaw = url.searchParams.get('limit')
+      const before = url.searchParams.get('before') ?? undefined
+      const limit = limitRaw ? Number(limitRaw) : 50
+      if (limitRaw && (!Number.isFinite(limit) || limit < 1 || limit > 200)) {
+        sendJson(res, req, 400, { error: 'limit must be 1–200' })
+        return
+      }
+
+      const repo = ConversationRepo.fromEnv()
+      const conversation = await repo.getConversation(conversationId)
+      if (!conversation) {
+        sendJson(res, req, 404, { error: 'Conversation not found' })
+        return
+      }
+
+      const messages = await repo.listMessages(conversationId, { limit, before })
+      sendJson(res, req, 200, {
+        conversation_id: conversationId,
+        messages: messages.map((row) => ({
+          id: row.id,
+          role: row.role,
+          content: row.content,
+          created_at: row.created_at
+        }))
+      })
+      return
+    }
+
     if (path === '/v1/chat' && method === 'POST') {
       let body: unknown
       try {
@@ -178,9 +220,27 @@ export async function handleRequest(
       const rerank = (body as { rerank?: unknown }).rerank
       const candidate_pool = (body as { candidate_pool?: unknown }).candidate_pool
       const synthesize = (body as { synthesize?: unknown }).synthesize
+      const conversation_id = (body as { conversation_id?: unknown }).conversation_id
+      const title = (body as { title?: unknown }).title
+      const use_external_llm = (body as { use_external_llm?: unknown }).use_external_llm
 
       if (typeof query !== 'string' || query.length < 1 || query.length > 2000) {
         sendJson(res, req, 400, { error: 'query must be 1–2000 characters' })
+        return
+      }
+      if (conversation_id !== undefined && typeof conversation_id !== 'string') {
+        sendJson(res, req, 400, { error: 'conversation_id must be a string' })
+        return
+      }
+      if (title !== undefined && typeof title !== 'string') {
+        sendJson(res, req, 400, { error: 'title must be a string' })
+        return
+      }
+      if (
+        use_external_llm !== undefined &&
+        typeof use_external_llm !== 'boolean'
+      ) {
+        sendJson(res, req, 400, { error: 'use_external_llm must be a boolean' })
         return
       }
 
@@ -192,31 +252,69 @@ export async function handleRequest(
       const useSynthesize =
         typeof synthesize === 'boolean' ? synthesize : true
 
-      const result: ChatAnswerResult = await answerWithRag({
+      const chatOptions = {
         query,
         topK,
         minScore,
         rerank: useRerank,
         candidatePool,
-        synthesize: useSynthesize
-      })
+        synthesize: useSynthesize,
+        conversationId:
+          typeof conversation_id === 'string' ? conversation_id : undefined,
+        title: typeof title === 'string' ? title : undefined,
+        useExternalLlm:
+          typeof use_external_llm === 'boolean' ? use_external_llm : undefined
+      }
 
-      if (
-        result.meta.index_status === 'no_index' ||
-        result.meta.index_status === 'sync_failed'
-      ) {
-        sendJson(res, req, 503, { error: 'Index unavailable', meta: result.meta })
+      if (persistenceRequired(chatOptions)) {
+        sendJson(res, req, 503, { error: 'Persistence unavailable' })
         return
       }
 
-      sendJson(res, req, 200, {
-        answer: result.answer,
-        chunks: result.chunks,
-        ann_chunks: result.annChunks,
-        meta: result.meta,
-        synthesis_fallback: result.synthesis_fallback ?? false
-      })
-      return
+      try {
+        const result = shouldPersistConversation(chatOptions)
+          ? await conversationalAnswer(chatOptions)
+          : {
+              ...(await answerWithRag(chatOptions)),
+              conversation_id: null,
+              message_id: null,
+              llm_meta: {
+                llm_provider: null,
+                llm_model: null,
+                llm_fallback: false
+              }
+            }
+
+        if (
+          result.meta.index_status === 'no_index' ||
+          result.meta.index_status === 'sync_failed'
+        ) {
+          sendJson(res, req, 503, { error: 'Index unavailable', meta: result.meta })
+          return
+        }
+
+        sendJson(res, req, 200, {
+          conversation_id: result.conversation_id,
+          message_id: result.message_id,
+          answer: result.answer,
+          chunks: result.chunks,
+          ann_chunks: result.annChunks,
+          meta: result.meta,
+          synthesis_fallback: result.synthesis_fallback ?? false
+        })
+        return
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Chat failed'
+        if (message === 'Conversation not found') {
+          sendJson(res, req, 404, { error: message })
+          return
+        }
+        if (message === 'Persistence unavailable') {
+          sendJson(res, req, 503, { error: message })
+          return
+        }
+        throw err
+      }
     }
 
     sendJson(res, req, 404, { error: 'Not found' })

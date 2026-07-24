@@ -2,8 +2,10 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   isPlaceholder,
+  missingChatPersistenceFields,
   missingCloudE2EFields,
   normalizeCloudRunUri,
+  parseChatPersistenceTfvars,
   parseTfvarsSeed,
   resolveCloudE2EConfig,
   validateCloudE2EConfig
@@ -48,5 +50,28 @@ region     = "us-central1"
 
   it('normalizes trailing slash on URI', () => {
     assert.equal(normalizeCloudRunUri('https://x.run.app/'), 'https://x.run.app')
+  })
+
+  it('parses chat persistence tfvars', () => {
+    const chat = parseChatPersistenceTfvars(`
+enable_chat_persistence = true
+postgres_url            = "postgresql://example"
+gemini_api_key          = "secret"
+llm_provider            = "gemini"
+`)
+    assert.equal(chat.enabled, true)
+    assert.equal(chat.postgresUrl, 'postgresql://example')
+    assert.deepEqual(missingChatPersistenceFields(chat), [])
+  })
+
+  it('flags missing chat secrets when enabled', () => {
+    const missing = missingChatPersistenceFields({
+      enabled: true,
+      postgresUrl: '',
+      geminiApiKey: 'your-key',
+      llmProvider: 'gemini'
+    })
+    assert.ok(missing.includes('postgres_url'))
+    assert.ok(missing.includes('gemini_api_key'))
   })
 })

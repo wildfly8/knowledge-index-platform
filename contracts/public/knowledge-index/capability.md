@@ -12,8 +12,8 @@ For a deployed configuration, this platform:
 - resumes archive backfill from the last committed cursor after failure;
 - uses deterministic vector ids and content hashes for idempotent retries;
 - stores chunk metadata per `data-contract.md` without auth or user identity;
-- exposes operator CLIs, optional Airflow DAG, and the Feature **003** query HTTP API;
-- serves two-stage retrieve (bi-encoder ANN + cross-encoder rerank) and extractive/generative answer composition when `npm run serve` is running.
+- exposes operator CLIs, optional Airflow DAG, and the Feature **003/006** query HTTP API;
+- serves two-stage retrieve (bi-encoder ANN + cross-encoder rerank), extractive/generative answer composition, and optional Neon-backed conversation threads when `npm run serve` is running.
 
 ## Producer responsibilities
 

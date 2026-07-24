@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.0.0
+
+- **MINOR** (additive): `POST /v1/chat` optional conversation persistence
+  (`conversation_id`, `title`) backed by Neon Postgres (Feature 006).
+- **MINOR** (additive): `GET /v1/conversations/:id/messages` for thread history.
+- Optional external LLM (`LLM_PROVIDER`, `GEMINI_API_KEY`) when persistence is
+  enabled; stateless chat (no `conversation_id` / `title`) unchanged from 3.0.0.
+
 ## 3.0.0
 
 - **MINOR** (additive): `POST /v1/chat` — retrieve + extractive/generative answer
